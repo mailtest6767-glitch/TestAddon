@@ -1,0 +1,2 @@
+## Title: TestAddon v_RELEASE_VERSION_
+## Version: _RELEASE_VERSION_
