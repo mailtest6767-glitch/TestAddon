@@ -40,6 +40,7 @@ jobs:
                 VERSION="${{ steps.get_version.outputs.VERSION }}"
                 cd dist
                 zip -r "TestAddon-${VERSION}.zip" TestAddon/
+                cd ..
 
             - name: Upload ZIP to GitHub Release
               uses: softprops/action-gh-release@v2
