@@ -2,11 +2,7 @@
 # - Тег релиза может иметь вид: 1.1, v1.1, v.1.1 (проверить для трех чисел) (можно добавить и другие префиксы, помимо "v" и "v." которые будут отсекаться)
 # - Имя репозитория может не совпадать с именем аддона (под именем аддона здесь имеется в виду имя папки и toc-файла аддона)
 # - В репозитории обязана быть папка src и в ней обязан быть один (и только один) toc-файл
-
 # - Имя архива - это имя репозитория + символ минус + номер версии без префикса
-#
-#
-
 
 name: Package Addon Release
 
@@ -32,7 +28,7 @@ jobs:
           # Получить имя аддона (по имени toc-файла)
           ADDON_NAME="$(basename src/*.toc .toc)"
 
-          # Получить версию релиза (удалив из тега префиксы "v." и "v")
+          # Получить версию релиза (удалив префиксы "v." и "v" из тега релиза)
           RELEASE_VERSION="${{ github.ref_name }}"
           RELEASE_VERSION="${RELEASE_VERSION#v.}"
           RELEASE_VERSION="${RELEASE_VERSION#v}"
@@ -42,33 +38,34 @@ jobs:
           echo "ADDON_NAME=$ADDON_NAME" >> $GITHUB_ENV
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
 
-      - name: Create release folder
-        run: mkdir -p "$ADDON_NAME"
-
-
-
-
-
-      - name: Process TOC file (Replace version)
+      - name: Create release folder and copy files
         run: |
-          sed "s/_RELEASE_VERSION_/${RELEASE_VERSION}/g" src/TestAddon.toc > TestAddon/TestAddon.toc
+          cp -r src/. "$ADDON_NAME"
 
-      - name: Process LUA file (Remove comments and blank lines)
+      - name: Process files
         run: |
-          # 1. Удаляем многострочные комментарии --[[ ... ]]
-          # 2. Удаляем однострочные комментарии -- ...
-          # 3. Удаляем пустые строки и строки только с пробелами
-          perl -0777 -pe 's/--\[\[.*?\]\]//gs' src/TestAddon.lua | \
-          sed 's/--.*$//' | \
-          sed '/^[[:space:]]*$/d' > TestAddon/TestAddon.lua
+          # Set release version in TOC file
+          sed -i "s/_RELEASE_VERSION_/${RELEASE_VERSION}/g" "$ADDON_NAME/$ADDON_NAME.toc"
+
+          # Remove comments and blank lines from LUA files
+          find "$ADDON_NAME" -type f -name "*.lua" -exec perl -0777 -i -pe '
+            # 1. Удаляем блочные комментарии, убирая только горизонтальные пробелы/табы перед --[[
+            s/[ \t]*--\[\[.*?\]\]//gs;
+            # 2. Удаляем однострочные комментарии с горизонтальными пробелами/табами перед --
+            s/[ \t]*--.*$//gm;
+            # 3. Удаляем пустые строки (включая Windows \r\n)
+            s/^\s*\r?\n//gm;
+            # 4. Удаляем пробелы/табы в конце строк
+            s/[ \t]+$//gm;
+          ' {} +
 
       - name: Create ZIP archive
         run: |
-          zip -r "TestAddon-${RELEASE_VERSION}.zip" TestAddon/
+          zip -r "${REPO_NAME}-${RELEASE_VERSION}.zip" "${ADDON_NAME}"
 
       - name: Upload ZIP to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: TestAddon-${RELEASE_VERSION}.zip
+          files: "${REPO_NAME}-${RELEASE_VERSION}.zip"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
