@@ -13,6 +13,12 @@ on:
 permissions:
   contents: write
 
+# Объявляем переменные тут, чтобы убрать ошибку "Context access might be invalid"
+env:
+  REPO_NAME: ""
+  ADDON_NAME: ""
+  RELEASE_VERSION: ""
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -66,6 +72,6 @@ jobs:
       - name: Upload ZIP to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "${REPO_NAME}-${RELEASE_VERSION}.zip"
+          files: ${{ env.REPO_NAME }}-${{ env.RELEASE_VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
