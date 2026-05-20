@@ -17,8 +17,9 @@ jobs:
       - name: Get release version
         id: get_version
         run: |
-          VERSION="${{github.ref_name}}"
-          VERSION="${VERSION#v}"             # удаляем букву 'v', если есть
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v.}"              # удаляем 'v.', если есть
+          VERSION="${VERSION#v}"               # удаляем 'v', если есть
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create release folder structure
