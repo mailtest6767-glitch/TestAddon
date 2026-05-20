@@ -1,48 +1,51 @@
 name: Package Addon Release
 
 on:
-    release:
-        types: [published]
+  release:
+    types: [published]
 
 permissions:
-    contents: write
-  
+  contents: write
+
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Get release version
-              id: get_version
-              run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Get release version
+        id: get_version
+        run: |
+          VERSION="${{github.ref_name}}"
+          VERSION="${VERSION#v}"             # удаляем букву 'v', если есть
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-            - name: Create release folder structure
-              run: mkdir -p TestAddon
+      - name: Create release folder structure
+        run: mkdir -p TestAddon
 
-            - name: Process TOC file (Replace version)
-              run: |
-                VERSION="${{ steps.get_version.outputs.VERSION }}"
-                sed "s/_RELEASE_VERSION_/${VERSION}/g" src/TestAddon.toc > TestAddon/TestAddon.toc
+      - name: Process TOC file (Replace version)
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          sed "s/_RELEASE_VERSION_/${VERSION}/g" src/TestAddon.toc > TestAddon/TestAddon.toc
 
-            - name: Process LUA file (Remove comments and blank lines)
-              run: |
-                # 1. Удаляем многострочные комментарии --[[ ... ]]
-                # 2. Удаляем однострочные комментарии -- ...
-                # 3. Удаляем пустые строки и строки только с пробелами
-                perl -0777 -pe 's/--\[\[.*?\]\]//gs' src/TestAddon.lua | \
-                sed 's/--.*$//' | \
-                sed '/^[[:space:]]*$/d' > TestAddon/TestAddon.lua
+      - name: Process LUA file (Remove comments and blank lines)
+        run: |
+          # 1. Удаляем многострочные комментарии --[[ ... ]]
+          # 2. Удаляем однострочные комментарии -- ...
+          # 3. Удаляем пустые строки и строки только с пробелами
+          perl -0777 -pe 's/--\[\[.*?\]\]//gs' src/TestAddon.lua | \
+          sed 's/--.*$//' | \
+          sed '/^[[:space:]]*$/d' > TestAddon/TestAddon.lua
 
-            - name: Create ZIP archive
-              run: |
-                VERSION="${{ steps.get_version.outputs.VERSION }}"
-                zip -r "TestAddon-${VERSION}.zip" TestAddon/
+      - name: Create ZIP archive
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          zip -r "TestAddon-${VERSION}.zip" TestAddon/
 
-            - name: Upload ZIP to GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                files: TestAddon-${{ steps.get_version.outputs.VERSION }}.zip
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload ZIP to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TestAddon-${{ steps.get_version.outputs.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
